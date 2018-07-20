@@ -1,19 +1,27 @@
 #include <stdlib.h>
-#include "adjacency_list.h"
 #include "graph.h"
 
 struct vertex
 {
-    unsigned int number;
+    unsigned int position;
     vertex_decoration *decoration;
 };
 
 struct edge
 {
-    unsigned int number;
+    unsigned int position;
+    unsigned int position_neighborhood;
     vertex *source;
     vertex *destination;
     edge_decoration *decoration;
+};
+
+struct neighborhood
+{
+    vertex *home;
+    edge **neighbors;
+    unsigned int number_E;
+    unsigned int limit_E;
 };
 
 enum graph_type
@@ -24,24 +32,46 @@ enum graph_type
 
 struct graph
 {
-    adjacency_list *adj;
+    neighborhood **adj;
     unsigned int number_V;
-    unsigned int number_E;
     unsigned int limit_V;
+    unsigned int number_E;
     unsigned int limit_E;
     vertex **V;
     edge **E;
     graph_type type;
 };
 
-edge *new_edge(unsigned int number, vertex *source, vertex *destination, edge_decoration *decoration)
+vertex *new_vertex(unsigned int position, vertex_decoration *decoration)
+{
+    vertex *v = (vertex*)malloc(sizeof(vertex));
+    if(v != NULL)
+    {
+        v->position = position;
+        v->decoration = decoration;
+        return v;
+    }
+    return NULL;
+}
+
+void free_vertex(vertex *v)
+{
+    if(v != NULL)
+    {
+        free(v);
+        v = NULL;
+    }
+}
+
+edge *new_edge(unsigned int position, unsigned int position_neighborhood, vertex *source, vertex *destination, edge_decoration *decoration)
 {
     if(source != NULL && destination != NULL)
     {
         edge *e = (edge*)malloc(sizeof(edge));
         if(e != NULL)
         {
-            e->number = number;
+            e->position = position;
+            e->position_neighborhood = position_neighborhood;
             e->source = source;
             e->destination = destination;
             e->decoration = decoration;
@@ -60,24 +90,31 @@ void free_edge(edge *e)
     }
 }
 
-vertex *new_vertex(unsigned int number, vertex_decoration *decoration)
+neighborhood *new_neighborhood(vertex *home)
 {
-    vertex *v = (vertex*)malloc(sizeof(vertex));
-    if(v != NULL)
+    if(home != NULL)
     {
-        v->number = number;
-        v->decoration = decoration;
-        return v;
+        neighborhood *n = (neighborhood*)malloc(sizeof(neighborhood));
+        if(n != NULL)
+        {
+            n->home = home;
+            n->neighbors = NULL;
+            n->number_E = 0;
+            n->limit_E = 0;
+            return n;
+        }
     }
     return NULL;
 }
 
-void free_vertex(vertex *v)
+void free_neighborhood(neighborhood *n)
 {
-    if(v != NULL)
+    if(n != NULL)
     {
-        free(v);
-        v = NULL;
+        if(n->neighbors != NULL)
+            free(n->neighbors);
+        free(n);
+        n = NULL;
     }
 }
 
@@ -88,8 +125,8 @@ graph *new_graph(graph_type type)
     {
         G->adj = NULL;
         G->number_V = 0;
-        G->number_E = 0;
         G->limit_V = 0;
+        G->number_E = 0;
         G->limit_E = 0;
         G->V = NULL;
         G->E = NULL;
@@ -104,16 +141,20 @@ void free_graph(graph *G)
     if(G != NULL)
     {
         if(G->adj != NULL)
-            free_adjacency_list(G->adj);
+        {
+            for(int i = 0; i < G->limit_V; i++)
+                free_neighborhood(G->adj[i]);
+            free(G->adj);
+        }
         if(G->V != NULL)
         {
-            for(int i = 0; i < G->number_V; i++)
+            for(int i = 0; i < G->limit_V; i++)
                 free_vertex(G->V[i]);
             free(G->V);
         }
         if(G->E != NULL)
         {
-            for(int i = 0; i < G->number_E; i++)
+            for(int i = 0; i < G->limit_E; i++)
                 free_edge(G->E[i]);
             free(G->E);
         } 
@@ -122,10 +163,78 @@ void free_graph(graph *G)
     }
 }
 
-void add_vertex(graph *G, vertex_decoration *decoration)
+vertex *add_vertex(graph *G, vertex_decoration *decoration)
 {
     if(G != NULL)
     {
-
+        vertex *new_v = new_vertex(G->number_V, decoration);
+        neighborhood *new_vertex_neighborhood = new_neighborhood(new_v);
+        if(new_v != NULL && new_vertex_neighborhood != NULL)
+        {
+            if(G->number_V == G->limit_V)
+            {
+                unsigned int new_limit_V = (G->limit_V + 1) << 1;
+                vertex **new_vertex_array = (vertex**)calloc(new_limit_V, sizeof(vertex*));
+                neighborhood **new_adj = (neighborhood**)calloc(new_limit_V, sizeof(neighborhood*));
+                if(new_vertex_array != NULL && new_adj != NULL)
+                {
+                    G->limit_V = new_limit_V;
+                    for(int i = 0; i < G->number_V; i++)
+                    {
+                        new_vertex_array[i] = G->V[i];
+                        new_adj[i] = G->adj[i];
+                    }
+                    new_vertex_array[G->number_V] = new_v;
+                    new_adj[G->number_V] = new_vertex_neighborhood;
+                    G->number_V++;
+                    if(G->V != NULL)
+                        free(G->V);
+                    if(G->adj != NULL)
+                        free(G->adj);
+                    G->V = new_vertex_array;
+                    G->adj = new_adj;
+                }
+                else
+                {
+                    free_vertex(new_v);
+                    free_neighborhood(new_vertex_neighborhood);
+                    if(new_vertex_array != NULL)
+                        free(new_vertex_array);
+                    if(new_adj != NULL)
+                        free(new_adj);
+                    return NULL;    
+                } 
+            }
+            else
+            {
+                G->V[G->number_V] = new_v;
+                G->adj[G->number_V] = new_vertex_neighborhood;
+                G->number_V++;
+            }
+            return new_v;
+        }
+        else
+        {
+            if(new_v != NULL)
+                free_vertex(new_v);
+            if(new_vertex_neighborhood != NULL)
+                free_neighborhood(new_vertex_neighborhood);
+        }
     }
+    return NULL;
+}
+
+void remove_vertex(graph *G, vertex *v)
+{
+
+}
+
+edge *add_edge(graph *G, vertex *source, vertex *destination, edge_decoration *decoration)
+{
+
+}
+
+void remove_edge(graph *G, edge *e)
+{
+
 }
