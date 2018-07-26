@@ -226,12 +226,61 @@ vertex *add_vertex(graph *G, vertex_decoration *decoration)
 
 void remove_vertex(graph *G, vertex *v)
 {
+    if(G != NULL && v != NULL && G->number_V > 0 && v->position < G->number_V && G->V[v->position] == v)
+    {
+        if(G->number_V <= G->limit_V >> 2)
+        {
+            unsigned int new_limit_V = G->limit_V >> 1;
+            vertex **new_vertex_array = (vertex**)calloc(new_limit_V, sizeof(vertex*));
+            neighborhood **new_adj = (neighborhood**)calloc(new_limit_V, sizeof(neighborhood*));
+            if(new_vertex_array != NULL && new_adj != NULL)
+            {
+                for(int i = 0; i < G->limit_V; i++)
+                {
+                    if(i < G->number_V)
+                    {
+                        new_vertex_array[i] = G->V[i];
+                        new_adj[i] = G->adj[i];
+                    }
+                    else
+                        free_neighborhood(G->adj[i]);
+                }
+                G->limit_V = new_limit_V;
+                free(G->V);
+                free(G->adj);
+                G->V = new_vertex_array;
+                G->adj = new_adj;
+            }
+            else
+            {
+                if(new_vertex_array != NULL)
+                    free(new_vertex_array);
+                if(new_adj != NULL)
+                    free(new_adj);
+                exit(1);
+            }
+        }
+        vertex *v_aux = G->V[v->position];
+        G->V[G->number_V - 1]->position = v->position;
+        G->V[v->position] = G->V[G->number_V - 1];
+        G->V[G->number_V - 1] = v_aux;
 
+        neighborhood *n_aux = G->adj[v->position];
+        G->adj[v->position] = G->adj[G->number_V - 1];
+        G->adj[G->number_V - 1] = n_aux;
+
+        free_vertex(v);
+        G->V[G->number_V - 1] = NULL;
+        G->number_V--;
+    }
 }
 
 edge *add_edge(graph *G, vertex *source, vertex *destination, edge_decoration *decoration)
 {
-
+    if(G != NULL)
+    {
+        
+    }
 }
 
 void remove_edge(graph *G, edge *e)
