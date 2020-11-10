@@ -1,0 +1,6 @@
+Gerados 20 grafos com 10 vértices e chance 1/7 de aresta
+Gerados 20 grafos com 20 vértices e chance 1/10 de aresta
+Gerados 20 grafos com 20 vértices e chance 1/20 de aresta
+Gerados 20 grafos com 20 vértices e chance 1/15 de aresta
+Gerados 20 grafos com 30 vértices e chance 1/10 de aresta
+Gerados 20 grafos com 30 vértices e chance 1/7 de aresta
